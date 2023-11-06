@@ -1,4 +1,6 @@
+import os
 from tqdm import tqdm
+import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -77,6 +79,15 @@ if __name__ == "__main__":
             count += 1
             if i % log_freq == 0:
                 print(f"Epoch {epoch}, Training Loss {loss / count:.4f}")
+        
+        # save model
+        save_dir = "out"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        now = datetime.datetime.now()
+        date = now.strftime("%Y%m%d")
+        torch.save(ltc_model.state_dict(), os.path.join(save_dir, f"ltc_model_{epoch}_{date}.pth"))
+
         # validation
         ltc_model.eval()
         loss = 0.0
