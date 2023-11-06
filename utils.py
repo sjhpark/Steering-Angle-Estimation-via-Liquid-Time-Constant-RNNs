@@ -43,7 +43,7 @@ def data_process():
     pq.write_table(test_table, os.path.join(processdir, "test.parquet"))
 
 class DrivingDataset(Dataset):
-    def __init__(self, N=10, transform=None, flag="train"):
+    def __init__(self, N=10, transform=transforms.ToTensor(), flag="train"):
         self.img_dir = "dataset/data"
         self.flag = flag
         if flag == "train":
@@ -68,8 +68,10 @@ class DrivingDataset(Dataset):
         for i in range(self.N):
             img_name = self.data["image"].iloc[idx + i]
             img = Image.open(os.path.join(self.img_dir, img_name)) # image
-            if self.transform is not None and self.flag == "train":
+            if self.flag == "train":
                 img = self.transform(img)
+            elif self.flag == "test":
+                img = transforms.ToTensor()(img)
             img_sequence.append(img)
 
             angle = self.data["angle"].iloc[idx + i] # steering angle
