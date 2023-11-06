@@ -1,7 +1,5 @@
 import os
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import pyarrow as pa
 import pyarrow.parquet as pq
 from sklearn.model_selection import train_test_split
@@ -11,6 +9,7 @@ from PIL import Image
 from torchvision import transforms
 
 def data_process():
+    """Dataset is from https://github.com/SullyChen/driving-datasets"""
     datadir = "dataset"
     imgdir = os.path.join(datadir, "data")
     data = os.path.join(datadir, "data.txt")
@@ -38,24 +37,51 @@ def data_process():
     # convert to parquet table
     train_table = pa.Table.from_pandas(train_df)
     test_table = pa.Table.from_pandas(test_df)
+    
     # Save as parquet file
     pq.write_table(train_table, os.path.join(processdir, "train.parquet"))
     pq.write_table(test_table, os.path.join(processdir, "test.parquet"))
 
 class DrivingDataset(Dataset):
-    def __init__(self, img_dir, data_dir):
-        self.img_dir = img_dir
-        self.data_dir = data_dir
-        self.data = pq.read_table(data_dir).to_pandas()
-        self.transforms = transforms.Compose([transforms.ToTensor()])
-   
+    def __init__(self, N=10, transform=None, flag="train"):
+        self.img_dir = "dataset/data"
+        if flag == "train":
+            self.data_dir = "dataset/processed/train.parquet"
+        elif flag == "test":
+            self.data_dir = "dataset/processed/test.parquet"
+        else:
+            raise ValueError("flag must be either 'train' or 'test'")
+        self.data = pq.read_table(self.data_dir).to_pandas() # data (image names & steering angles)
+
+        self.transform = transform # image augmentation
+
+        self.N = N # sequence length
+        self.total_sequences = len(self.data["image"]) - N + 1 # total number of sequences
+
     def __len__(self):
-        return len(self.data)
-    
+        return self.total_sequences
+
     def __getitem__(self, idx):
-        img_name = self.data["image"].iloc[idx]
-        img = Image.open(os.path.join(self.img_dir, img_name)) # image
-        img = self.transforms(img)
-        angle = self.data["angle"].iloc[idx] # steering angle
-        angle = torch.tensor(float(angle))
-        return img, angle
+        img_sequence = []
+        angle_sequence = []
+        for i in range(self.N):
+            img_name = self.data["image"].iloc[idx + i]
+            img = Image.open(os.path.join(self.img_dir, img_name)) # image
+            if self.transform:
+                img = self.transform(img)
+            img_sequence.append(img)
+
+            angle = self.data["angle"].iloc[idx + i] # steering angle
+            angle = torch.tensor(float(angle))
+            angle_sequence.append(angle)
+
+        img_sequence = torch.stack(img_sequence)
+        angle_sequence = torch.stack(angle_sequence)
+        return img_sequence, angle_sequence
+
+# data augmentation using torchvision.transforms
+def augment():
+    transform = transforms.Compose([
+        transforms.ToTensor()
+        ])
+    return transform
