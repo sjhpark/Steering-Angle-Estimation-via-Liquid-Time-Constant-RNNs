@@ -45,6 +45,7 @@ def data_process():
 class DrivingDataset(Dataset):
     def __init__(self, N=10, transform=None, flag="train"):
         self.img_dir = "dataset/data"
+        self.flag = flag
         if flag == "train":
             self.data_dir = "dataset/processed/train.parquet"
         elif flag == "test":
@@ -67,7 +68,7 @@ class DrivingDataset(Dataset):
         for i in range(self.N):
             img_name = self.data["image"].iloc[idx + i]
             img = Image.open(os.path.join(self.img_dir, img_name)) # image
-            if self.transform:
+            if self.transform is not None and self.flag == "train":
                 img = self.transform(img)
             img_sequence.append(img)
 
@@ -81,7 +82,9 @@ class DrivingDataset(Dataset):
 
 # data augmentation using torchvision.transforms
 def augment():
+    """Data Augmentation on PIL image"""
     transform = transforms.Compose([
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        # TODO: Find mean & std dev of training dataset; torchvision.transforms.Normalize doesn't support PIL.Image, so has to be done after transform.ToTensor()
         ])
     return transform
