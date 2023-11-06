@@ -35,13 +35,13 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(DrivingDataset(N, augmentation, "test"), batch_size=batch_size, shuffle=True)
 
     # Feature Extractor
-    feature_extractor = SimpleCNN()
+    feature_extractor = SimpleCNN().to(device)
 
     # LTC in NCP
     in_features = 1 # 1 type of in_features: extracted features from CNN
     out_features = 1 # 1 type of out_features: steering angle
     wiring = AutoNCP(units, out_features)  # 16 units, 1 motor neuron
-    ltc_model = LTC(in_features, wiring, batch_first=True)
+    ltc_model = LTC(in_features, wiring, batch_first=True).to(device)
 
     # Criterion and Optimizer
     criterion = nn.MSELoss()
