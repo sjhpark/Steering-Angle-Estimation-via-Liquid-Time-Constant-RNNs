@@ -14,6 +14,7 @@ class SimpleCNN(nn.Module):
         self.fc1 = nn.Linear(16 * 61 * 110, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 1)
+
     def forward(self, x):
         x = self.pool(torch.relu(self.conv1(x)))
         x = self.pool(torch.relu(self.conv2(x)))
@@ -24,13 +25,13 @@ class SimpleCNN(nn.Module):
         return x
 
 class Network(nn.Module):
-    def __init__(self, units):
+    def __init__(self, wiring):
         super(Network, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 61 * 110, 120)
-        self.units = units
+        self.wiring = wiring
 
     def forward(self, x, batch_size, N):
         x = self.pool(torch.relu(self.conv1(x)))
@@ -40,10 +41,8 @@ class Network(nn.Module):
         x = x.view(batch_size, N, -1) # (B,N,120)
  
         self.in_features = x.shape[-1]
-        self.out_features = 1 # steering angle 
         device = x.device
-        wiring = AutoNCP(self.units, self.out_features)  # arguments: units, motor neurons
-        ltc_model = LTC(self.in_features, wiring, batch_first=True).to(device)
+        ltc_model = LTC(self.in_features, self.wiring, batch_first=True).to(device)
         
         x = ltc_model(x) # (B,N,self.out_features)
         return x

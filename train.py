@@ -38,8 +38,12 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(DrivingDataset(N, augmentation, "train"), batch_size=batch_size, shuffle=True, num_workers=num_workers)
     test_dataloader = DataLoader(DrivingDataset(N, augmentation, "test"), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
+    # Wiring
+    out_features = 1 # steering angle 
+    wiring = AutoNCP(units, out_features)  # arguments: units, motor neurons
+
     # Network
-    model = Network(units).to(device)
+    model = Network(wiring=wiring).to(device)
 
     # Criterion and Optimizer
     criterion = nn.MSELoss()
