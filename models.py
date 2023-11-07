@@ -32,16 +32,18 @@ class Network(nn.Module):
         self.fc1 = nn.Linear(16 * 61 * 110, 120)
         self.units = units
 
-    def forward(self, x):
+    def forward(self, x, batch_size, N):
         x = self.pool(torch.relu(self.conv1(x)))
         x = self.pool(torch.relu(self.conv2(x)))
         x = x.view(-1, 16 * 61 * 110)
-        x = torch.relu(self.fc1(x))
-
+        x = torch.relu(self.fc1(x)) # (B*N,120)
+        x = x.view(batch_size, N, -1) # (B,N,120)
+ 
         self.in_features = x.shape[-1]
         self.out_features = 1 # steering angle 
         device = x.device
         wiring = AutoNCP(self.units, self.out_features)  # arguments: units, motor neurons
         ltc_model = LTC(self.in_features, wiring, batch_first=True).to(device)
-        x = ltc_model(x)
+        
+        x = ltc_model(x) # (B,N,self.out_features)
         return x

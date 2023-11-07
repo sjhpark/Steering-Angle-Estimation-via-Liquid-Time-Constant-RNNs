@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--N", type=int, default=10, help="image sequence length")
     parser.add_argument("--units", type=int, default=16, help="number of units in NCP")
     parser.add_argument("--log_freq", type=int, default=100, help="logging frequency")
+    parser.add_argument("--num_workers", type=int, default=1, help="number of workers for dataloader")
     args = parser.parse_args()
 
     # Hyperparameters
@@ -29,12 +30,13 @@ if __name__ == "__main__":
     N = args.N
     units = args.units
     log_freq = args.log_freq
+    num_workers = args.num_workers
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Dataloaders
     augmentation = augment()
-    train_dataloader = DataLoader(DrivingDataset(N, augmentation, "train"), batch_size=batch_size, shuffle=True)
-    test_dataloader = DataLoader(DrivingDataset(N, augmentation, "test"), batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(DrivingDataset(N, augmentation, "train"), batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    test_dataloader = DataLoader(DrivingDataset(N, augmentation, "test"), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     # Network
     model = Network(units).to(device)
@@ -55,10 +57,10 @@ if __name__ == "__main__":
             img = img.view(-1, C, H, W) # (B*N,C,H,W)
 
             angle = angle.to(device) # (B,N)
-            angle = angle.view(-1, 1) # (B*N,1)
+            angle = angle.unsqueeze(-1) # (B,N,1)
 
             optimizer.zero_grad()
-            pred_angle, hx = model(img) # (B*N,1)
+            pred_angle, hx = model(img, batch_size, N) # (B,N,1)
 
             loss = criterion(pred_angle, angle)
             loss.backward()
@@ -85,9 +87,9 @@ if __name__ == "__main__":
                 img = img.to(device)
                 img = img.view(-1, C, H, W)
                 angle = angle.to(device)
-                angle = angle.view(-1, 1)
+                angle = angle.unsqueeze(-1)
 
-                pred_angle, hx = model(img)
+                pred_angle, hx = model(img, batch_size, N)
                 
                 loss = criterion(pred_angle, angle)
                 loss += loss.item()
