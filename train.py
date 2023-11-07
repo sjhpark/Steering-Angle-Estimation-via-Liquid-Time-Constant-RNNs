@@ -8,7 +8,7 @@ from torchvision import transforms
 import argparse
 
 from utils import DrivingDataset, augment
-from models import SimpleCNN
+from models import Network
 from ncps.wirings import AutoNCP 
 from ncps.torch import LTC
 
@@ -36,23 +36,17 @@ if __name__ == "__main__":
     train_dataloader = DataLoader(DrivingDataset(N, augmentation, "train"), batch_size=batch_size, shuffle=True)
     test_dataloader = DataLoader(DrivingDataset(N, augmentation, "test"), batch_size=batch_size, shuffle=True)
 
-    # Feature Extractor
-    feature_extractor = SimpleCNN().to(device)
-
-    # LTC in NCP
-    in_features = 1 # 1 type of in_features: extracted features from CNN
-    out_features = 1 # 1 type of out_features: steering angle
-    wiring = AutoNCP(units, out_features)  # 16 units, 1 motor neuron
-    ltc_model = LTC(in_features, wiring, batch_first=True).to(device)
+    # Network
+    model = Network(units).to(device)
 
     # Criterion and Optimizer
     criterion = nn.MSELoss()
-    ltc_optimizer = torch.optim.Adam(ltc_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # Train
     for epoch in range(epochs):
         # training
-        ltc_model.train()
+        model.train()
         loss = 0.0
         count = 0
         for i, (img, angle) in tqdm(enumerate(train_dataloader), desc="Training...", total=len(train_dataloader)):
@@ -63,18 +57,12 @@ if __name__ == "__main__":
             angle = angle.to(device) # (B,N)
             angle = angle.view(-1, 1) # (B*N,1)
 
-            # Feature Extraction
-            features = feature_extractor(img) # (B*N,1)
-            features = features.view(-1, N, 1) # (B,N,1)
-
-            # NCP
-            ltc_optimizer.zero_grad()
-            pred_angle, hx = ltc_model(features) # (B,N,1)
-            pred_angle = pred_angle.view(-1, 1) # (B*N,1)
+            optimizer.zero_grad()
+            pred_angle, hx = model(img) # (B*N,1)
 
             loss = criterion(pred_angle, angle)
             loss.backward()
-            ltc_optimizer.step()
+            optimizer.step()
             loss += loss.item()
             count += 1
             if i % log_freq == 0:
@@ -86,10 +74,10 @@ if __name__ == "__main__":
             os.makedirs(save_dir)
         now = datetime.datetime.now()
         date = now.strftime("%Y%m%d")
-        torch.save(ltc_model.state_dict(), os.path.join(save_dir, f"ltc_model_{epoch}_{date}.pth"))
+        torch.save(model.state_dict(), os.path.join(save_dir, f"model_{epoch}_{date}.pth"))
 
         # validation
-        ltc_model.eval()
+        model.eval()
         loss = 0.0
         count = 0
         with torch.no_grad():
@@ -99,11 +87,7 @@ if __name__ == "__main__":
                 angle = angle.to(device)
                 angle = angle.view(-1, 1)
 
-                features = feature_extractor(img) # (B*N,1)
-                features = features.view(-1, N, 1) # (B,N,1)
-
-                pred_angle, hx = ltc_model(features) # (B,N,1)
-                pred_angle = pred_angle.view(-1, 1) # (B*N,1)
+                pred_angle, hx = model(img)
                 
                 loss = criterion(pred_angle, angle)
                 loss += loss.item()

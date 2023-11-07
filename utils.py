@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from torchvision import transforms
+import math
 
 def data_process():
     """Dataset is from https://github.com/SullyChen/driving-datasets"""
@@ -22,6 +23,7 @@ def data_process():
     print("# of images: ", len(os.listdir(imgdir)))
 
     """Data (image names & steering angles) Preprocessing"""
+    print("Preprocessing data...")
     # convert txt to pandas dataframe
     data_df = pd.read_csv(data, sep=",", header=None, names=["image angle", "timestamp"])
     # drop timestamp column
@@ -30,6 +32,8 @@ def data_process():
     data_df = data_df["image angle"].apply(lambda x: pd.Series(x.split(" ")))
     # set header names
     data_df.columns = ["image", "angle"]
+    # convert angle to radians
+    data_df["angle"] = data_df["angle"].astype(float) * math.pi / 180
 
     """Train and Validation Data Split using sklearn"""
     # split train and validation data without shuffling
@@ -41,6 +45,9 @@ def data_process():
     # Save as parquet file
     pq.write_table(train_table, os.path.join(processdir, "train.parquet"))
     pq.write_table(test_table, os.path.join(processdir, "test.parquet"))
+
+    print("Preprocessing complete")
+    print(f"Data saved in {processdir}")
 
 class DrivingDataset(Dataset):
     def __init__(self, N=10, transform=transforms.ToTensor(), flag="train"):
