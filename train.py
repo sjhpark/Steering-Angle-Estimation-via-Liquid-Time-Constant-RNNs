@@ -65,6 +65,9 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             pred_angle, hx = model(img, batch_size, N) # (B,N,1)
+            
+            if pred_angle.shape[0] != angle.shape[0]:
+                continue
 
             loss = criterion(pred_angle, angle)
             loss.backward()
@@ -72,7 +75,7 @@ if __name__ == "__main__":
             loss += loss.item()
             count += 1
             if i % log_freq == 0:
-                print(f"Epoch {epoch}, Training Loss {loss / count:.4f}")
+                print(f"Epoch {epoch}, Training Loss {loss / count:.6f}")
         
         # save model
         save_dir = "out"
@@ -95,7 +98,10 @@ if __name__ == "__main__":
 
                 pred_angle, hx = model(img, batch_size, N)
                 
+                if pred_angle.shape[0] != angle.shape[0]:
+                    continue
+
                 loss = criterion(pred_angle, angle)
                 loss += loss.item()
                 count += 1
-        print(f"Epoch {epoch}, Testing Loss {loss / count:.4f}")
+        print(f"Epoch {epoch}, Testing Loss {loss / count:.6f}")
