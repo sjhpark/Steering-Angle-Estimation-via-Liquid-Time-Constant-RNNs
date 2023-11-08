@@ -69,7 +69,7 @@ if __name__ == "__main__":
             if pred_angle.shape[0] != angle.shape[0]:
                 continue
 
-            loss = torch.sqrt(criterion(pred_angle, angle)) # RMSE to penalize errors becoming far from 0 in either positive or negative direction
+            loss = torch.sqrt(criterion(pred_angle, angle)) # RMSE
             loss.backward()
             optimizer.step()
             loss += loss.item()
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 if pred_angle.shape[0] != angle.shape[0]:
                     continue
 
-                loss = torch.sqrt(criterion(pred_angle, angle)) # RMSE to penalize errors becoming far from 0 in either positive or negative direction
+                loss = torch.sqrt(criterion(pred_angle, angle)) # RMSE
                 loss += loss.item()
                 count += 1
         print(f"Epoch {epoch}, Testing Loss {loss / count:.6f}")
